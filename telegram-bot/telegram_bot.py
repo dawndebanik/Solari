@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+from html import escape
+
 import dotenv
 import logging
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -24,6 +26,7 @@ from telegram.ext import (
     filters
 )
 from telegram.error import TelegramError
+from firebase_wrapper import FireBaseManager, Transaction
 
 # Configure logging
 logging.basicConfig(
@@ -121,13 +124,13 @@ class SheetMonitor:
                 row = rows[i]
                 if len(row) >= 5:  # Ensure the row has all required fields
                     row_dict = {
-                        "TransactionId": row[0],
-                        "Date": row[1],
-                        "Time": row[2],
-                        "Description": row[3],
-                        "Amount": row[4],
-                        "Bank": row[5],
-                        "Mode": row[6]
+                        "transaction_id": row[0],
+                        "date": row[1],
+                        "time": row[2],
+                        "recipient": row[3],
+                        "amount": row[4],
+                        "bank": row[5],
+                        "mode": row[6]
                     }
                     new_rows.append(row_dict)
 
@@ -315,6 +318,7 @@ class TelegramBot:
         self.sheet_monitor = sheet_monitor
         self.config_manager = config_manager
         self.transaction_context = TransactionContext()
+        self.firebase_manager = FireBaseManager()
         self._setup_handlers()
 
     def _setup_handlers(self) -> None:
@@ -328,9 +332,6 @@ class TelegramBot:
         conv_handler = ConversationHandler(
             entry_points=[CallbackQueryHandler(self.category_selected, pattern=r'^cat_')],
             states={
-                # SELECTING_CATEGORY: [
-                #     CallbackQueryHandler(self.category_selected, pattern=r'^cat_')
-                # ],
                 SELECTING_SHARING_TYPE: [
                     CallbackQueryHandler(self.sharing_type_selected, pattern=r'^share_')
                 ],
@@ -416,12 +417,12 @@ class TelegramBot:
         try:
             # Format the transaction message
             message = (
-                f"📝 *New Transaction*\n\n"
-                f"*Date:* {transaction['Date']}\n"
-                f"*Description:* {transaction['Description']}\n"
-                f"*Amount:* {transaction['Amount']}\n"
-                f"*Bank:* {transaction['Bank']}\n"
-                f"*Mode:* {transaction['Mode']}\n\n"
+                f"📝 <b>New Transaction</b>\n\n"
+                f"<b>Date:</b> {escape(transaction['date'])}\n"
+                f"<b>Description:</b> {escape(transaction['recipient'])}\n"
+                f"<b>Amount:</b> {escape(transaction['amount'])}\n"
+                f"<b>Bank:</b> {escape(transaction['bank'])}\n"
+                f"<b>Mode:</b> {escape(transaction['mode'])}\n\n"
                 f"Please categorize this transaction:"
             )
 
@@ -446,7 +447,7 @@ class TelegramBot:
                         chat_id=user_id,
                         text=message,
                         reply_markup=reply_markup,
-                        parse_mode='Markdown'
+                        parse_mode='HTML'
                     )
                 except TelegramError as e:
                     logger.error(f"Failed to send message to user {user_id}: {e}")
@@ -477,11 +478,13 @@ class TelegramBot:
 
                 transaction_row = all_rows[row_index]
                 transaction = {
-                    "Date": transaction_row[0],
-                    "Description": transaction_row[1],
-                    "Amount": transaction_row[2],
-                    "Bank": transaction_row[3],
-                    "Mode": transaction_row[4]
+                    "transaction_id": transaction_row[0],
+                    "date": transaction_row[1],
+                    "time": transaction_row[2],
+                    "recipient": transaction_row[3],
+                    "amount": transaction_row[4],
+                    "bank": transaction_row[5],
+                    "mode": transaction_row[6]
                 }
 
                 # Store the context for this conversation
@@ -639,9 +642,20 @@ class TelegramBot:
             user_share = conversation["user_share"] if is_shared else None
             row_index = conversation["row_index"]
 
-            # Update the Google Sheet
-            success = self.sheet_monitor.update_transaction_details(
-                row_index, category, is_shared, user_share
+            # Log to Firebase
+            success = self.firebase_manager.write_transaction(
+                Transaction(
+                    conversation['transaction']['transaction_id'],
+                    conversation['transaction']['date'],
+                    conversation['transaction']['time'],
+                    conversation['transaction']['recipient'],
+                    conversation['transaction']['amount'],
+                    conversation['transaction']['bank'],
+                    conversation['transaction']['mode'],
+                    category,
+                    is_shared,
+                    user_share
+                )
             )
 
             # Format a confirmation message
