@@ -160,7 +160,8 @@ class TelegramBot:
         """Handle /start command"""
         user_id = update.effective_user.id
         await update.message.reply_text(
-            MSG_START.format(first_name=update.effective_user.first_name)
+            MSG_START.format(first_name=update.effective_user.first_name),
+            parse_mode=HTML_PARSE_MODE
         )
 
     async def check_cmd(self, update: Update, context: CallbackContext) -> None:
