@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
 
 from persistence.models import Transaction
-from persistence.persistence_wrapper import PersistenceWrapper
+from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
 from sheet_monitor import SheetMonitor
 
 # Telegram Bot imports
@@ -35,7 +35,8 @@ from constants import CREDENTIALS_FILE_NAME, CONFIG_FILE, ENV_TELEGRAM_TOKEN, EN
     KEY_TIME, KEY_RECIPIENT, KEY_AMOUNT, KEY_BANK, KEY_MODE, CONFIG_USER_IDS, \
     CONTEXT_TRANSACTION, CONTEXT_ROW_INDEX, CONTEXT_CATEGORY, CONTEXT_IS_SHARED, CONTEXT_USER_SHARE, BTN_SHARED_EXPENSE, \
     BTN_SOLO_EXPENSE, BUTTONS_PER_ROW, \
-    CHECK_INTERVAL_SECONDS, FIRST_CHECK_DELAY_SECONDS, HTML_PARSE_MODE, SHARED_TYPE, SOLO_TYPE
+    CHECK_INTERVAL_SECONDS, FIRST_CHECK_DELAY_SECONDS, HTML_PARSE_MODE, SHARED_TYPE, SOLO_TYPE, \
+    ENV_SHEET_NAME_POST_REVIEW, ENV_POSTGRES_CONNECTION_STRING
 
 # Configure logging
 logging.basicConfig(
@@ -129,7 +130,12 @@ class TelegramBot:
         self.sheet_monitor = sheet_monitor
         self.config_manager = config_manager
         self.transaction_context = TransactionContext()
-        self.persistence_wrapper = PersistenceWrapper()
+        self.persistence_wrapper = PersistenceWrapper(
+            FireBaseManager(),
+            PostgresManager(os.environ.get(ENV_POSTGRES_CONNECTION_STRING)),
+            sheet_monitor
+        )
+
         self._setup_handlers()
 
     def _setup_handlers(self) -> None:
@@ -540,8 +546,12 @@ def main():
 
     try:
         # Initialize components
-        sheet_monitor = SheetMonitor(CREDENTIALS_FILE_NAME, os.environ.get(ENV_SHEET_ID),
-                                     os.environ.get(ENV_SHEET_NAME))
+        sheet_monitor = SheetMonitor(
+            CREDENTIALS_FILE_NAME,
+            os.environ.get(ENV_SHEET_ID),
+            os.environ.get(ENV_SHEET_NAME),
+            os.environ.get(ENV_SHEET_NAME_POST_REVIEW)
+        )
         config_manager = ConfigManager(CONFIG_FILE)
 
         # Create and start the bot

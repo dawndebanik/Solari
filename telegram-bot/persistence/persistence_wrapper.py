@@ -1,16 +1,15 @@
 import logging
-import os
+from contextlib import closing
 
 import firebase_admin
+import psycopg2
 from dotenv import load_dotenv
 from firebase_admin import credentials
 from firebase_admin import firestore
-import psycopg2
 from psycopg2 import sql
-from contextlib import closing
 
-from constants import ENV_POSTGRES_CONNECTION_STRING
 from persistence.models import Transaction
+from sheet_monitor import SheetMonitor
 
 TRANSACTIONS_COLLECTION_NAME = 'transactions'
 
@@ -109,22 +108,28 @@ class PostgresManager:
 
 
 class PersistenceWrapper:
-    def __init__(self):
-        self.firebase_manager = FireBaseManager()
-        self.postgres_manager = PostgresManager(os.environ.get(ENV_POSTGRES_CONNECTION_STRING))
+    def __init__(self, firebase_manager: FireBaseManager, postgres_manager: PostgresManager, sheet_manager: SheetMonitor):
+        self.firebase_manager = firebase_manager
+        self.postgres_manager = postgres_manager
+        self.sheet_manager = sheet_manager
 
     def write_transaction(self, transaction) -> bool:
         success = True
         try:
-            self.firebase_manager.write_transaction(transaction)
-        except Exception as e:
-            logger.error(f"Error writing to firebase: {e}")
-            success = False
-
-        try:
-            self.postgres_manager.write_transaction(transaction)
-        except Exception as e:
-            logger.error(f"Error writing to postgres: {e}")
-            success = False
+            self.sheet_manager.write_transaction(transaction)
+            return True
+        except:
+            return False
+        # try:
+        #     self.firebase_manager.write_transaction(transaction)
+        # except Exception as e:
+        #     logger.error(f"Error writing to firebase: {e}")
+        #     success = False
+        #
+        # try:
+        #     self.postgres_manager.write_transaction(transaction)
+        # except Exception as e:
+        #     logger.error(f"Error writing to postgres: {e}")
+        #     success = False
 
         return success

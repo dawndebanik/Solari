@@ -3,6 +3,7 @@ CONFIG_FILE = 'bot_config.json'
 ENV_TELEGRAM_TOKEN = 'TELEGRAM_TOKEN'
 ENV_SHEET_ID = 'SHEET_ID'
 ENV_SHEET_NAME = 'SHEET_NAME'
+ENV_SHEET_NAME_POST_REVIEW = 'SHEET_NAME_POST_REVIEW'
 ENV_POSTGRES_CONNECTION_STRING = 'POSTGRES_CONNECTION_STRING'
 CMD_START = "start"
 CMD_CHECK = "check"
@@ -66,9 +67,20 @@ MSG_TRANSACTION_UPDATE_FAILED = (
 MSG_TRANSACTION_CANCELLED = "Transaction categorization cancelled."
 MSG_ERROR = "An error occurred: {error}"
 MSG_GENERAL_ERROR = "An error occurred. Please try again later."
+
+# Column names
+COL_BANK = "Bank"
+COL_MODE = "Mode"
+COL_AMOUNT = "Amount"
+COL_RECIPIENT = "Recipient"
+COL_TIME = "Time"
+COL_DATE = "Date"
+COL_TRANSACTION_ID = "Transaction ID"
 COL_CATEGORY = "Category"
 COL_IS_SHARED = "Is Shared"
 COL_USER_SHARE = "User Share"
+
+
 KEY_TRANSACTION_ID = "transaction_id"
 KEY_DATE = "date"
 KEY_TIME = "time"
@@ -76,6 +88,8 @@ KEY_RECIPIENT = "recipient"
 KEY_AMOUNT = "amount"
 KEY_BANK = "bank"
 KEY_MODE = "mode"
+
+
 CONFIG_LAST_PROCESSED_ROW = "last_processed_row"
 CONFIG_USER_IDS = "user_ids"
 CONTEXT_TRANSACTION = "transaction"
