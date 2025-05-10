@@ -19,7 +19,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-class SheetMonitor:
+class GoogleSheetsManager:
     """Class for monitoring and interacting with Google Sheets"""
 
     def __init__(self, credentials_file: str, sheet_id: str, sheet_name: str, write_sheet_name: str):

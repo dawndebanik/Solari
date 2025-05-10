@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from persistence.models import Transaction
 from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
-from sheet_monitor import SheetMonitor
+from sheet_monitor import GoogleSheetsManager
 
 # Telegram Bot imports
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -116,24 +116,24 @@ class TransactionContext:
 class TelegramBot:
     """Main Telegram bot class"""
 
-    def __init__(self, token: str, sheet_monitor: SheetMonitor,
+    def __init__(self, token: str, gsheets_manager: GoogleSheetsManager,
                  config_manager: ConfigManager):
         """
         Initialize the Telegram bot
 
         Args:
             token: Telegram Bot API token
-            sheet_monitor: Sheet monitor instance
+            gsheets_manager: Sheet monitor instance
             config_manager: Config manager instance
         """
         self.application = Application.builder().token(token).build()
-        self.sheet_monitor = sheet_monitor
+        self.sheet_monitor = gsheets_manager
         self.config_manager = config_manager
         self.transaction_context = TransactionContext()
         self.persistence_wrapper = PersistenceWrapper(
             FireBaseManager(),
             PostgresManager(os.environ.get(ENV_POSTGRES_CONNECTION_STRING)),
-            sheet_monitor
+            gsheets_manager
         )
 
         self._setup_handlers()
@@ -546,7 +546,7 @@ def main():
 
     try:
         # Initialize components
-        sheet_monitor = SheetMonitor(
+        gsheets_manager = GoogleSheetsManager(
             CREDENTIALS_FILE_NAME,
             os.environ.get(ENV_SHEET_ID),
             os.environ.get(ENV_SHEET_NAME),
@@ -555,7 +555,7 @@ def main():
         config_manager = ConfigManager(CONFIG_FILE)
 
         # Create and start the bot
-        bot = TelegramBot(token, sheet_monitor, config_manager)
+        bot = TelegramBot(token, gsheets_manager, config_manager)
 
         # Schedule periodic checks (every 5 minutes)
         job_queue = bot.application.job_queue

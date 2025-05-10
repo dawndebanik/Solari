@@ -9,7 +9,7 @@ from firebase_admin import firestore
 from psycopg2 import sql
 
 from persistence.models import Transaction
-from sheet_monitor import SheetMonitor
+from sheet_monitor import GoogleSheetsManager
 
 TRANSACTIONS_COLLECTION_NAME = 'transactions'
 
@@ -108,7 +108,7 @@ class PostgresManager:
 
 
 class PersistenceWrapper:
-    def __init__(self, firebase_manager: FireBaseManager, postgres_manager: PostgresManager, sheet_manager: SheetMonitor):
+    def __init__(self, firebase_manager: FireBaseManager, postgres_manager: PostgresManager, sheet_manager: GoogleSheetsManager):
         self.firebase_manager = firebase_manager
         self.postgres_manager = postgres_manager
         self.sheet_manager = sheet_manager
