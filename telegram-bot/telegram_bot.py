@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from persistence.models import Transaction
 from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
-from sheet_monitor import GoogleSheetsManager
+from commons.google_sheets_manager import GoogleSheetsManager
 
 # Telegram Bot imports
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup

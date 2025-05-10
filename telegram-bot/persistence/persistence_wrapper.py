@@ -9,7 +9,7 @@ from firebase_admin import firestore
 from psycopg2 import sql
 
 from persistence.models import Transaction
-from sheet_monitor import GoogleSheetsManager
+from commons.google_sheets_manager import GoogleSheetsManager
 
 TRANSACTIONS_COLLECTION_NAME = 'transactions'
 
