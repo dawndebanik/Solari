@@ -1,6 +1,7 @@
 import logging
 from contextlib import closing
 
+import asyncio
 import firebase_admin
 import psycopg2
 from dotenv import load_dotenv
@@ -25,7 +26,7 @@ class FireBaseManager:
         firebase_admin.initialize_app(cred)
         self.db = firestore.client()
 
-    def write_transaction(self, transaction: Transaction) -> bool:
+    async def write_transaction(self, transaction: Transaction) -> bool:
         try:
             self.db.collection(TRANSACTIONS_COLLECTION_NAME).document(transaction.transaction_id).set({
                 'date': transaction.date,
@@ -56,7 +57,7 @@ class PostgresManager:
         """
         self.db_config = db_config
 
-    def write_transaction(self, transaction) -> bool:
+    async def write_transaction(self, transaction) -> bool:
         insert_query = sql.SQL("""
             INSERT INTO transactions (
                 transaction_id,
