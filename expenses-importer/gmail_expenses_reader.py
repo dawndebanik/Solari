@@ -1,9 +1,9 @@
 import base64
+import datetime
 import os
 import pickle
 import re
 
-import pandas as pd
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -71,6 +71,21 @@ def get_label_id_by_name(service, label_name):
             return label['id']
     return None
 
+def convert_epoch_ms_to_datetime(epoch_ms: int):
+    """
+    Convert epoch timestamp in milliseconds to a formatted date and time string.
+
+    Args:
+        epoch_ms (int): Epoch time in milliseconds.
+        to_utc (bool): If True, returns time in UTC. Otherwise, returns local time.
+
+    Returns:
+        str: Formatted datetime string (YYYY-MM-DD HH:MM:SS)
+    """
+    epoch_sec = epoch_ms / 1000  # Convert to seconds
+
+    dt = datetime.datetime.fromtimestamp(epoch_sec)
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 def process_emails(service, label_name='CreditCardTransactions'):
     gsheets_manager = GoogleSheetsManager(
@@ -100,8 +115,8 @@ def process_emails(service, label_name='CreditCardTransactions'):
 
             # Parse out the body
             body = base64.urlsafe_b64decode(message['payload']['parts'][0]['body']['data']).decode('utf-8')
-            sender = message['payload']['headers'][0]['value']  # From header
-            email_date = message['internalDate']
+            sender = list(filter(lambda item: item['name'] == 'From', message['payload']['headers']))[0]['value']
+            email_date = convert_epoch_ms_to_datetime(int(message['internalDate']))
 
             # Detect the bank
             bank = detect_bank(sender, body)
@@ -116,8 +131,8 @@ def process_emails(service, label_name='CreditCardTransactions'):
                     gsheets_manager.add_raw_transaction(
                         Transaction(
                             transaction_id,
-                            email_date,
-                            email_date,
+                            email_date.split(' ')[0],
+                            email_date.split(' ')[1],
                             recipient,
                             amount,
                             bank,
