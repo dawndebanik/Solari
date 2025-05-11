@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Dict, Any
 
-from constants import CONFIG_LAST_PROCESSED_ROW, DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS
+from commons.constants import CONFIG_LAST_PROCESSED_ROW, DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,7 @@ from gspread import WorksheetNotFound
 from constants import KEY_TRANSACTION_ID, KEY_DATE, KEY_TIME, KEY_RECIPIENT, KEY_AMOUNT, KEY_BANK, KEY_MODE, \
     COL_CATEGORY, COL_IS_SHARED, COL_USER_SHARE, YES_VALUE, NO_VALUE, NA_VALUE, COL_BANK, COL_MODE, COL_AMOUNT, \
     COL_RECIPIENT, COL_TIME, COL_DATE, COL_TRANSACTION_ID
+from env import SERVICE_ACCOUNT_CREDENTIALS_PATH
 from persistence.models import Transaction
 
 logger = logging.getLogger(__name__)
@@ -22,10 +23,10 @@ SCOPES = [
 class GoogleSheetsManager:
     """Class for monitoring and interacting with Google Sheets"""
 
-    def __init__(self, credentials_file: str, sheet_id: str, sheet_name: str, write_sheet_name: str):
+    def __init__(self, sheet_id: str, sheet_name: str, write_sheet_name: str):
         """Initialize the Sheet Monitor with credentials and sheet information"""
         self.sheet_id = sheet_id
-        self.credentials_file = credentials_file
+        self.credentials_file = SERVICE_ACCOUNT_CREDENTIALS_PATH
         self.sheet_name = sheet_name
         self.write_sheet_name = write_sheet_name
         self.client = None
@@ -161,7 +162,7 @@ class GoogleSheetsManager:
             logger.error(f"Failed to update transaction details: {e}")
             return False
 
-    def write_transaction(self, transaction: Transaction) -> bool:
+    def add_reviewed_transaction(self, transaction: Transaction) -> bool:
         """
         Append a new transaction to the Google Sheet.
 
@@ -206,6 +207,51 @@ class GoogleSheetsManager:
 
             # Append the row
             self.write_sheet.append_row(row)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to write transaction: {e}")
+            return False
+
+    def add_raw_transaction(self, transaction: Transaction) -> bool:
+        """
+        Append a new transaction to the Google Sheet.
+
+        Args:
+            transaction: A Transaction object containing all transaction details.
+
+        Returns:
+            True if the write was successful, False otherwise.
+        """
+        try:
+            # Get existing headers
+            headers = self.sheet.row_values(1)
+
+            # Define expected headers and values
+            expected_headers = [
+                COL_TRANSACTION_ID, COL_DATE, COL_TIME, COL_RECIPIENT, COL_AMOUNT,
+                COL_BANK, COL_MODE
+            ]
+            header_map = {header: index for index, header in enumerate(headers)}
+
+            # Add any missing headers
+            for idx, expected_header in enumerate(expected_headers):
+                if expected_header not in header_map:
+                    self.sheet.update_cell(1, len(headers) + 1, expected_header)
+                    headers.append(expected_header)
+                    header_map[expected_header] = len(headers) - 1
+
+            # Build row in correct order
+            row = [""] * len(headers)
+            row[header_map[COL_TRANSACTION_ID]] = transaction.transaction_id
+            row[header_map[COL_DATE]] = transaction.date
+            row[header_map[COL_TIME]] = transaction.time
+            row[header_map[COL_RECIPIENT]] = transaction.recipient
+            row[header_map[COL_AMOUNT]] = str(transaction.amount)
+            row[header_map[COL_BANK]] = transaction.bank
+            row[header_map[COL_MODE]] = transaction.mode
+
+            # Append the row
+            self.sheet.append_row(row)
             return True
         except Exception as e:
             logger.error(f"Failed to write transaction: {e}")

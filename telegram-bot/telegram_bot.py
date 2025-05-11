@@ -25,7 +25,7 @@ from telegram.ext import (
 
 # Constants and configs
 from config_manager import ConfigManager
-from constants import CREDENTIALS_FILE_NAME, CONFIG_FILE, ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
+from commons.constants import TELEGRAM_BOT_CONFIG_FILE_NAME, ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
     CMD_START, CMD_CHECK, CMD_AUTHORIZE, CMD_CANCEL, CALLBACK_CATEGORY_PREFIX, \
     CALLBACK_SHARE_PREFIX, CALLBACK_SHARE_YES, CALLBACK_SHARE_NO, MSG_START, MSG_UNAUTHORIZED, MSG_CHECKING, \
     MSG_NO_TRANSACTIONS, MSG_FOUND_TRANSACTIONS, MSG_AUTHORIZED, MSG_TRANSACTION_NOTIFICATION, \
@@ -547,12 +547,11 @@ def main():
     try:
         # Initialize components
         gsheets_manager = GoogleSheetsManager(
-            CREDENTIALS_FILE_NAME,
             os.environ.get(ENV_SHEET_ID),
             os.environ.get(ENV_SHEET_NAME),
             os.environ.get(ENV_SHEET_NAME_POST_REVIEW)
         )
-        config_manager = ConfigManager(CONFIG_FILE)
+        config_manager = ConfigManager(TELEGRAM_BOT_CONFIG_FILE_NAME)
 
         # Create and start the bot
         bot = TelegramBot(token, gsheets_manager, config_manager)

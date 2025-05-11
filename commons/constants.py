@@ -1,5 +1,4 @@
-CREDENTIALS_FILE_NAME = 'credentials.json'  # Your Google API credentials file
-CONFIG_FILE = 'bot_config.json'
+TELEGRAM_BOT_CONFIG_FILE_NAME = 'bot_config.json'
 ENV_TELEGRAM_TOKEN = 'TELEGRAM_TOKEN'
 ENV_SHEET_ID = 'SHEET_ID'
 ENV_SHEET_NAME = 'SHEET_NAME'
@@ -28,7 +27,7 @@ MSG_AUTHORIZED = "You have been authorized to use this bot."
 MSG_TRANSACTION_NOTIFICATION = (
     "📝 <b>New Transaction</b>\n\n"
     "<b>Date:</b> {date}\n"
-    "<b>Description:</b> {recipient}\n"
+    "<b>Recipient:</b> {recipient}\n"
     "<b>Amount:</b> {amount}\n"
     "<b>Bank:</b> {bank}\n"
     "<b>Mode:</b> {mode}\n\n"
@@ -53,7 +52,7 @@ MSG_INVALID_SHARE_EXCEEDS_TOTAL = (
 MSG_INVALID_AMOUNT_FORMAT = "Invalid amount format. Please enter a numeric value:"
 MSG_TRANSACTION_UPDATED = (
     "✅ <b>Transaction Updated</b>\n\n"
-    "<b>Description:</b> {recipient}\n"
+    "<b>Recipient:</b> {recipient}\n"
     "<b>Amount:</b> {amount}\n"
     "<b>Category:</b> {category}\n"
     "<b>Type:</b> {type} expense\n"

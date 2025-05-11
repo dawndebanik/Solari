@@ -1,5 +1,0 @@
-python-telegram-bot[job-queue]
-gspread
-google-auth
-python-dotenv
-firebase-admin

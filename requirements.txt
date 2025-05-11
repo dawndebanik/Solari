@@ -1,0 +1,12 @@
+python-telegram-bot[job-queue]
+gspread
+google-auth
+python-dotenv
+firebase-admin
+schedule
+oauth2client
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+pandas

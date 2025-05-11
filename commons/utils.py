@@ -1,8 +1,8 @@
 import hashlib
 
 
-def get_fingerprint_for_transaction(date, description, amount, bank):
-    return f"{date}|{description}|{amount}|{bank}"
+def get_fingerprint_for_transaction(date, recipient, amount, bank):
+    return f"{date}|{recipient}|{amount}|{bank}"
 
 
 def generate_transaction_id(fingerprint):
@@ -11,6 +11,6 @@ def generate_transaction_id(fingerprint):
     return ''.join('{:02x}'.format(b) for b in md5_hash)
 
 
-def get_transaction_id(date, description, amount, bank):
-    fingerprint = get_fingerprint_for_transaction(date, description, amount, bank)
+def get_transaction_id(date, recipient, amount, bank):
+    fingerprint = get_fingerprint_for_transaction(date, recipient, amount, bank)
     return generate_transaction_id(fingerprint)

@@ -8,12 +8,11 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from psycopg2 import sql
 
+from env import FIREBASE_CREDENTIALS_PATH
 from persistence.models import Transaction
 from commons.google_sheets_manager import GoogleSheetsManager
 
 TRANSACTIONS_COLLECTION_NAME = 'transactions'
-
-FIREBASE_CREDENTIALS_PATH = "persistence/firebase_credentials.json"
 
 load_dotenv()
 
@@ -116,20 +115,18 @@ class PersistenceWrapper:
     def write_transaction(self, transaction) -> bool:
         success = True
         try:
-            self.sheet_manager.write_transaction(transaction)
-            return True
-        except:
-            return False
-        # try:
-        #     self.firebase_manager.write_transaction(transaction)
-        # except Exception as e:
-        #     logger.error(f"Error writing to firebase: {e}")
-        #     success = False
-        #
-        # try:
-        #     self.postgres_manager.write_transaction(transaction)
-        # except Exception as e:
-        #     logger.error(f"Error writing to postgres: {e}")
-        #     success = False
+            self.sheet_manager.add_reviewed_transaction(transaction)
+        except Exception as e:
+            logger.error(f"Error writing to Google Sheets: {e}")
+            success = False
+
+        # Fire-and-forget async calls
+        def fire_and_forget(fn, *args):
+            loop = asyncio.get_event_loop()
+            loop.create_task(fn(*args))
+
+        # Fire async tasks for Firebase and Postgres without awaiting them
+        fire_and_forget(self.firebase_manager.write_transaction, transaction)
+        fire_and_forget(self.postgres_manager.write_transaction, transaction)
 
         return success
