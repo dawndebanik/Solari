@@ -23,9 +23,11 @@ from telegram.ext import (
     filters
 )
 
+TELEGRAM_BOT_CONFIG_FILE_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json')
+
 # Constants and configs
 from config_manager import ConfigManager
-from commons.constants import TELEGRAM_BOT_CONFIG_FILE_NAME, ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
+from commons.constants import ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
     CMD_START, CMD_CHECK, CMD_AUTHORIZE, CMD_CANCEL, CALLBACK_CATEGORY_PREFIX, \
     CALLBACK_SHARE_PREFIX, CALLBACK_SHARE_YES, CALLBACK_SHARE_NO, MSG_START, MSG_UNAUTHORIZED, MSG_CHECKING, \
     MSG_NO_TRANSACTIONS, MSG_FOUND_TRANSACTIONS, MSG_AUTHORIZED, MSG_TRANSACTION_NOTIFICATION, \
