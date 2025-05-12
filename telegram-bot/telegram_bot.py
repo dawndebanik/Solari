@@ -446,7 +446,7 @@ class TelegramBot:
         try:
             category = conversation[CONTEXT_CATEGORY]
             is_shared = conversation[CONTEXT_IS_SHARED]
-            user_share = conversation[CONTEXT_USER_SHARE] if is_shared else None
+            user_share = conversation[CONTEXT_USER_SHARE] if is_shared else conversation[CONTEXT_TRANSACTION][KEY_AMOUNT]
 
             # Log to persistence store
             success = self.persistence_wrapper.write_transaction(
