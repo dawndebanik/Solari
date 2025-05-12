@@ -20,6 +20,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
+
 class GoogleSheetsManager:
     """Class for monitoring and interacting with Google Sheets"""
 
@@ -117,51 +118,6 @@ class GoogleSheetsManager:
             logger.error(f"Error getting new rows: {e}")
             return [], last_processed_row
 
-    def update_transaction_details(self, row_index: int, category: str,
-                                   is_shared: bool, user_share: float = None) -> bool:
-        """
-        Update the transaction with category and sharing information
-
-        Args:
-            row_index: The index of the row to update
-            category: The expense category
-            is_shared: Whether the expense is shared
-            user_share: User's share amount if shared
-
-        Returns:
-            True if update successful, False otherwise
-        """
-        try:
-            # Adjust row_index to account for 1-based indexing in Google Sheets
-            actual_row = row_index + 1
-
-            # Add columns for category, sharing status, and share amount if they don't exist
-            headers = self.sheet.row_values(1)
-            if COL_CATEGORY not in headers:
-                self.sheet.update_cell(1, len(headers) + 1, COL_CATEGORY)
-            category_col = headers.index(COL_CATEGORY) + 1 if COL_CATEGORY in headers else len(headers) + 1
-
-            if COL_IS_SHARED not in headers:
-                self.sheet.update_cell(1, len(headers) + 2, COL_IS_SHARED)
-            shared_col = headers.index(COL_IS_SHARED) + 1 if COL_IS_SHARED in headers else len(headers) + 2
-
-            if COL_USER_SHARE not in headers:
-                self.sheet.update_cell(1, len(headers) + 3, COL_USER_SHARE)
-            user_share_col = headers.index(COL_USER_SHARE) + 1 if COL_USER_SHARE in headers else len(headers) + 3
-
-            # Update cells
-            self.sheet.update_cell(actual_row, category_col, category)
-            self.sheet.update_cell(actual_row, shared_col, YES_VALUE if is_shared else NO_VALUE)
-            if is_shared and user_share is not None:
-                self.sheet.update_cell(actual_row, user_share_col, str(user_share))
-            else:
-                self.sheet.update_cell(actual_row, user_share_col, NA_VALUE)
-
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update transaction details: {e}")
-            return False
-
     def add_reviewed_transaction(self, transaction: Transaction) -> bool:
         """
         Append a new transaction to the Google Sheet.
@@ -256,4 +212,3 @@ class GoogleSheetsManager:
         except Exception as e:
             logger.error(f"Failed to write transaction: {e}")
             return False
-
