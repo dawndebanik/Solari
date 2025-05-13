@@ -157,9 +157,7 @@ class GoogleSheetsManager:
             row[header_map[COL_MODE]] = transaction.mode
             row[header_map[COL_CATEGORY]] = transaction.category
             row[header_map[COL_IS_SHARED]] = YES_VALUE if transaction.is_shared else NO_VALUE
-            row[header_map[COL_USER_SHARE]] = (
-                str(transaction.user_share) if transaction.is_shared and transaction.user_share is not None else NA_VALUE
-            )
+            row[header_map[COL_USER_SHARE]] = str(transaction.user_share)
 
             # Append the row
             self.write_sheet.append_row(row)
