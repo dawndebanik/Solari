@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Dict, Any
 
-from commons.constants import CONFIG_LAST_PROCESSED_ROW, DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS
+from commons.constants import CONFIG_LAST_PROCESSED_ROW, DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS, DEBANIKS_USER_ID
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,13 @@ class ConfigManager:
             else:
                 default_config = {
                     CONFIG_LAST_PROCESSED_ROW: DEFAULT_LAST_PROCESSED_ROW,
-                    CONFIG_USER_IDS: []  # List of authorized Telegram user IDs
+                    CONFIG_USER_IDS: [DEBANIKS_USER_ID]  # List of authorized Telegram user IDs
                 }
                 self._save_config(default_config)
                 return default_config
         except Exception as e:
             logger.error(f"Error loading config: {e}")
-            return {CONFIG_LAST_PROCESSED_ROW: DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS: []}
+            return {CONFIG_LAST_PROCESSED_ROW: DEFAULT_LAST_PROCESSED_ROW, CONFIG_USER_IDS: [DEBANIKS_USER_ID]}
 
     def _save_config(self, config: Dict[str, Any]) -> bool:
         """Save configuration to file"""
@@ -50,19 +50,3 @@ class ConfigManager:
         """Update the last processed row index"""
         self.config[CONFIG_LAST_PROCESSED_ROW] = row_index
         return self._save_config(self.config)
-
-    def is_authorized_user(self, user_id: int) -> bool:
-        """Check if a user is authorized"""
-        if not self.config.get(CONFIG_USER_IDS):
-            # If no users configured, allow all (you may want to change this)
-            return True
-        return user_id in self.config.get(CONFIG_USER_IDS, [])
-
-    def add_authorized_user(self, user_id: int) -> bool:
-        """Add a user to the authorized users list"""
-        if user_id not in self.config.get(CONFIG_USER_IDS, []):
-            if CONFIG_USER_IDS not in self.config:
-                self.config[CONFIG_USER_IDS] = []
-            self.config[CONFIG_USER_IDS].append(user_id)
-            return self._save_config(self.config)
-        return True

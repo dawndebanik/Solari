@@ -4,12 +4,8 @@ import os
 import traceback
 from html import escape
 from typing import Dict, List, Optional, Any
+
 from dotenv import load_dotenv
-
-from persistence.models import Transaction
-from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
-from commons.google_sheets_manager import GoogleSheetsManager
-
 # Telegram Bot imports
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
@@ -23,14 +19,18 @@ from telegram.ext import (
     filters
 )
 
+from commons.google_sheets_manager import GoogleSheetsManager
+from persistence.models import Transaction
+from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
+
 TELEGRAM_BOT_CONFIG_FILE_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json')
 
 # Constants and configs
 from config_manager import ConfigManager
 from commons.constants import ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
-    CMD_START, CMD_CHECK, CMD_AUTHORIZE, CMD_CANCEL, CALLBACK_CATEGORY_PREFIX, \
-    CALLBACK_SHARE_PREFIX, CALLBACK_SHARE_YES, CALLBACK_SHARE_NO, MSG_START, MSG_UNAUTHORIZED, MSG_CHECKING, \
-    MSG_NO_TRANSACTIONS, MSG_FOUND_TRANSACTIONS, MSG_AUTHORIZED, MSG_TRANSACTION_NOTIFICATION, \
+    CMD_START, CMD_CHECK, CMD_CANCEL, CALLBACK_CATEGORY_PREFIX, \
+    CALLBACK_SHARE_PREFIX, CALLBACK_SHARE_YES, CALLBACK_SHARE_NO, MSG_START, MSG_CHECKING, \
+    MSG_NO_TRANSACTIONS, MSG_FOUND_TRANSACTIONS, MSG_TRANSACTION_NOTIFICATION, \
     MSG_TRANSACTION_NOT_FOUND, MSG_CATEGORY_SELECTED, MSG_CONTEXT_NOT_FOUND, MSG_SHARED_EXPENSE, \
     MSG_INVALID_SHARE_NEGATIVE, MSG_INVALID_SHARE_EXCEEDS_TOTAL, MSG_INVALID_AMOUNT_FORMAT, MSG_TRANSACTION_UPDATED, \
     MSG_TRANSACTION_UPDATE_FAILED, MSG_ERROR, KEY_TRANSACTION_ID, KEY_DATE, \
@@ -145,7 +145,6 @@ class TelegramBot:
         # Command handlers
         self.application.add_handler(CommandHandler(CMD_START, self.start_cmd))
         self.application.add_handler(CommandHandler(CMD_CHECK, self.check_cmd))
-        self.application.add_handler(CommandHandler(CMD_AUTHORIZE, self.authorize_cmd))
 
         # Conversation handler for transaction categorization flow
         conv_handler = ConversationHandler(
@@ -177,10 +176,6 @@ class TelegramBot:
         """Handle /check command to manually check for new transactions"""
         user_id = update.effective_user.id
 
-        if not self.config_manager.is_authorized_user(user_id):
-            await update.message.reply_text(MSG_UNAUTHORIZED)
-            return
-
         await update.message.reply_text(MSG_CHECKING)
 
         try:
@@ -194,14 +189,6 @@ class TelegramBot:
         except Exception as e:
             logger.error(f"Error checking updates: {e}")
             await update.message.reply_text(MSG_ERROR.format(error=str(e)))
-
-    async def authorize_cmd(self, update: Update, context: CallbackContext) -> None:
-        """Handle /authorize command to authorize a user"""
-        user_id = update.effective_user.id
-
-        # You might want to add admin-only restrictions here
-        self.config_manager.add_authorized_user(user_id)
-        await update.message.reply_text(MSG_AUTHORIZED)
 
     async def check_for_updates(self) -> List[Dict[str, str]]:
         """

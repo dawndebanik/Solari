@@ -16,13 +16,10 @@ MSG_START = (
     "I'll notify you when new expenses are added to your Google Sheet.\n\n"
     "<b>Commands:</b>\n"
     "/check - Manually check for new transactions\n"
-    "/authorize - Authorize yourself (admin only)"
 )
-MSG_UNAUTHORIZED = "You are not authorized to use this bot."
 MSG_CHECKING = "Checking for new transactions..."
 MSG_NO_TRANSACTIONS = "No new transactions found."
 MSG_FOUND_TRANSACTIONS = "Found {count} new transactions."
-MSG_AUTHORIZED = "You have been authorized to use this bot."
 MSG_TRANSACTION_NOTIFICATION = (
     "📝 <b>New Transaction</b>\n\n"
     "<b>Date:</b> {date}\n"
@@ -101,6 +98,7 @@ YES_VALUE = "Yes"
 NO_VALUE = "No"
 NA_VALUE = "N/A"
 DEFAULT_LAST_PROCESSED_ROW = 0
+DEBANIKS_USER_ID = 6585093194
 BUTTONS_PER_ROW = 2
 CHECK_INTERVAL_SECONDS = 5
 FIRST_CHECK_DELAY_SECONDS = 10
