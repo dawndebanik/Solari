@@ -127,7 +127,7 @@ class PersistenceWrapper:
             loop.create_task(fn(*args))
 
         # Fire async tasks for Firebase and Postgres without awaiting them
-        fire_and_forget(self.firebase_manager.write_transaction, transaction)
-        fire_and_forget(self.postgres_manager.write_transaction, transaction)
+        # fire_and_forget(self.firebase_manager.write_transaction, transaction)
+        # fire_and_forget(self.postgres_manager.write_transaction, transaction)
 
         return success

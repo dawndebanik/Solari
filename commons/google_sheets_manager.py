@@ -147,17 +147,17 @@ class GoogleSheetsManager:
                     header_map[expected_header] = len(headers) - 1
 
             # Build row in correct order
-            row = [""] * len(headers)
+            row = [object()] * len(headers)
             row[header_map[COL_TRANSACTION_ID]] = transaction.transaction_id
             row[header_map[COL_DATE]] = transaction.date
             row[header_map[COL_TIME]] = transaction.time
             row[header_map[COL_RECIPIENT]] = transaction.recipient
-            row[header_map[COL_AMOUNT]] = str(transaction.amount)
+            row[header_map[COL_AMOUNT]] = transaction.amount
             row[header_map[COL_BANK]] = transaction.bank
             row[header_map[COL_MODE]] = transaction.mode
             row[header_map[COL_CATEGORY]] = transaction.category
             row[header_map[COL_IS_SHARED]] = YES_VALUE if transaction.is_shared else NO_VALUE
-            row[header_map[COL_USER_SHARE]] = str(transaction.user_share)
+            row[header_map[COL_USER_SHARE]] = transaction.user_share
 
             # Append the row
             self.write_sheet.append_row(row)
