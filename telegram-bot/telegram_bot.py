@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 # Define constants for expense categories
 EXPENSE_CATEGORIES = [
-    "Home & Essentials", "Hobbies", "Commute",
+    "Investment", "Home & Essentials", "Commute",
     "Discretionary", "Shopping", "Health & Wellbeing",
     "Miscellaneous"
 ]
