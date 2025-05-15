@@ -6,6 +6,7 @@ from html import escape
 from typing import Dict, List
 
 from dotenv import load_dotenv
+from firebase_admin import credentials
 # Telegram Bot imports
 from telegram import Update, InlineKeyboardMarkup, ForceReply
 from telegram.error import TelegramError
@@ -22,6 +23,7 @@ from bot_utils import get_category_keyboard, get_sharing_type_keyboard, EXPENSE_
 from commons.google_sheets_manager import GoogleSheetsManager
 from constants import CONTEXT_RELATED_MESSAGE_IDS
 from conversation_context import ConversationContextManager, ConversationState
+from env import FIREBASE_CREDENTIALS_PATH
 from persistence.models import Transaction
 from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
 
@@ -53,8 +55,7 @@ load_dotenv()
 class TelegramBot:
     """Main Telegram bot class"""
 
-    def __init__(self, token: str, gsheets_manager: GoogleSheetsManager,
-                 config_manager: ConfigManager):
+    def __init__(self, token: str, gsheets_manager: GoogleSheetsManager, config_manager: ConfigManager, persistence_wrapper: PersistenceWrapper):
         """
         Initialize the Telegram bot
 
@@ -62,16 +63,14 @@ class TelegramBot:
             token: Telegram Bot API token
             gsheets_manager: Sheet monitor instance
             config_manager: Config manager instance
+            firebase_manager: Firebase database manager instance
+            postgres_manager: Postgres database manager instance
         """
         self.application = Application.builder().token(token).build()
         self.sheet_monitor = gsheets_manager
         self.config_manager = config_manager
         self.conversation_context_manager = ConversationContextManager()
-        self.persistence_wrapper = PersistenceWrapper(
-            FireBaseManager(),
-            PostgresManager(os.environ.get(ENV_POSTGRES_CONNECTION_STRING)),
-            gsheets_manager
-        )
+        self.persistence_wrapper = persistence_wrapper
 
         self._setup_handlers()
 
@@ -448,9 +447,12 @@ def main():
             os.environ.get(ENV_SHEET_NAME_POST_REVIEW)
         )
         config_manager = ConfigManager(TELEGRAM_BOT_CONFIG_FILE_NAME)
+        fire_base_manager = FireBaseManager(credentials.Certificate(FIREBASE_CREDENTIALS_PATH))
+        postgres_manager = PostgresManager(os.environ.get(ENV_POSTGRES_CONNECTION_STRING))
+        persistence_wrapper = PersistenceWrapper(fire_base_manager, postgres_manager, gsheets_manager)
 
         # Create and start the bot
-        bot = TelegramBot(token, gsheets_manager, config_manager)
+        bot = TelegramBot(token, gsheets_manager, config_manager, persistence_wrapper)
 
         # Schedule periodic checks (every 5 minutes)
         job_queue = bot.application.job_queue

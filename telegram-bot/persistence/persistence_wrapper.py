@@ -1,17 +1,15 @@
+import asyncio
 import logging
 from contextlib import closing
 
-import asyncio
 import firebase_admin
 import psycopg2
 from dotenv import load_dotenv
-from firebase_admin import credentials
 from firebase_admin import firestore
 from psycopg2 import sql
 
-from env import FIREBASE_CREDENTIALS_PATH
-from persistence.models import Transaction
 from commons.google_sheets_manager import GoogleSheetsManager
+from persistence.models import Transaction
 
 TRANSACTIONS_COLLECTION_NAME = 'transactions'
 
@@ -20,10 +18,9 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class FireBaseManager:
-    def __init__(self):
+    def __init__(self, creds):
         # Initialize Firebase app
-        cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
-        firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(creds)
         self.db = firestore.client()
 
     async def write_transaction(self, transaction: Transaction) -> bool:
