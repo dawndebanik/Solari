@@ -36,25 +36,26 @@ MSG_CATEGORY_SELECTED = (
     "Is this a shared expense or solo expense?"
 )
 MSG_CONTEXT_NOT_FOUND = "Error: Conversation context not found. Please try again."
-MSG_MULTIPLE_OPEN_THREADS = "There are too many open & incomplete conversation threads! Please reply to the message you want to converse about."
 MSG_SHARED_EXPENSE = (
     "This is a shared expense.\n\n"
     "Total amount: <b>{amount}</b>\n\n"
     "Please enter your share amount:"
 )
-MSG_INVALID_SHARE_NEGATIVE = "Share amount cannot be negative. Please enter a valid amount:"
+MSG_INVALID_SHARE_NEGATIVE = "Share amount cannot be negative. Reply to this message with a valid amount:"
 MSG_INVALID_SHARE_EXCEEDS_TOTAL = (
     "Share amount ({share}) cannot be greater than "
-    "total amount ({total}). Please enter a valid amount:"
+    "total amount ({total}). Reply to this message with a valid amount:"
 )
-MSG_INVALID_AMOUNT_FORMAT = "Invalid amount format. Please enter a numeric value:"
+MSG_INVALID_AMOUNT_FORMAT = "Invalid amount format. Reply to this message with a proper numeric value:"
 MSG_TRANSACTION_UPDATED = (
     "✅ <b>Transaction Updated</b>\n\n"
+    "<b>Date:</b> {date}\n"
+    "<b>Time:</b> {time}\n"
     "<b>Recipient:</b> {recipient}\n"
     "<b>Amount:</b> {amount}\n"
     "<b>Category:</b> {category}\n"
     "<b>Type:</b> {type} expense\n"
-    "{share_info}"
+    "<b>Your share:</b> {share_info}"
 )
 MSG_TRANSACTION_UPDATE_FAILED = (
     "❌ <b>Failed to Update Transaction</b>\n\n"
@@ -94,6 +95,8 @@ CONFIG_LAST_PROCESSED_ROW = "last_processed_row"
 CONFIG_USER_IDS = "user_ids"
 CONTEXT_TRANSACTION = "transaction"
 CONTEXT_CONVERSATION_STATE = "conversation_state"
+CONTEXT_RELATED_MESSAGE_IDS = "related_message_ids"
+
 BTN_SHARED_EXPENSE = "Shared Expense"
 BTN_SOLO_EXPENSE = "Solo Expense"
 YES_VALUE = "Yes"

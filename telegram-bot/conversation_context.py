@@ -1,8 +1,6 @@
 from typing import Optional, Dict, Any
 
-from telegram.ext import ConversationHandler
-
-from constants import CONTEXT_TRANSACTION, CONTEXT_CONVERSATION_STATE
+from constants import CONTEXT_TRANSACTION, CONTEXT_CONVERSATION_STATE, CONTEXT_RELATED_MESSAGE_IDS
 from persistence.models import Transaction
 
 from enum import Enum, auto
@@ -12,7 +10,6 @@ class ConversationState(Enum):
     SELECTING_CATEGORY = auto()
     SELECTING_SHARING_TYPE = auto()
     ENTERING_SHARE_AMOUNT = auto()
-    COMPLETED = auto()
 
 
 class ConversationContextManager:
@@ -25,7 +22,8 @@ class ConversationContextManager:
 
         self.conversations[user_id][transaction.transaction_id] = {
             CONTEXT_TRANSACTION: transaction,
-            CONTEXT_CONVERSATION_STATE: conversation_state
+            CONTEXT_CONVERSATION_STATE: conversation_state,
+            CONTEXT_RELATED_MESSAGE_IDS: []
         }
 
     def update_state(self, user_id: int, transaction_id: str, conversation_state: ConversationState) -> None:
@@ -52,6 +50,10 @@ class ConversationContextManager:
                 self.conversations[user_id][transaction_id][CONTEXT_TRANSACTION] = Transaction(transaction_id)
 
             self.conversations[user_id][transaction_id][CONTEXT_TRANSACTION].user_share = share_amount
+
+    def add_message_id_to_conversation_context(self, user_id: int, transaction_id: str, message_id: int):
+        if self.conversations.get(user_id) and self.conversations.get(user_id).get(transaction_id):
+            self.conversations[user_id][transaction_id][CONTEXT_RELATED_MESSAGE_IDS].append(message_id)
 
     def get_conversation(self, user_id: int, transaction_id: str) -> Optional[Dict[str, Any]]:
         user_conversations = self.conversations.get(user_id)

@@ -7,21 +7,20 @@ from typing import Dict, List
 
 from dotenv import load_dotenv
 # Telegram Bot imports
-from telegram import Update, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardMarkup, ForceReply
 from telegram.error import TelegramError
 from telegram.ext import (
     Application,
     CommandHandler,
     CallbackContext,
     CallbackQueryHandler,
-    ConversationHandler,
     MessageHandler,
-    filters
+    filters, ContextTypes
 )
 
 from bot_utils import get_category_keyboard, get_sharing_type_keyboard, EXPENSE_CATEGORIES
 from commons.google_sheets_manager import GoogleSheetsManager
-from constants import MSG_MULTIPLE_OPEN_THREADS
+from constants import CONTEXT_RELATED_MESSAGE_IDS
 from conversation_context import ConversationContextManager, ConversationState
 from persistence.models import Transaction
 from persistence.persistence_wrapper import PersistenceWrapper, FireBaseManager, PostgresManager
@@ -31,7 +30,7 @@ TELEGRAM_BOT_CONFIG_FILE_NAME = os.path.join(os.path.dirname(os.path.abspath(__f
 # Constants and configs
 from config_manager import ConfigManager
 from commons.constants import ENV_TELEGRAM_TOKEN, ENV_SHEET_ID, ENV_SHEET_NAME, \
-    CMD_START, CMD_CHECK, CMD_CANCEL, CALLBACK_CATEGORY_PREFIX, \
+    CMD_START, CMD_CHECK, CALLBACK_CATEGORY_PREFIX, \
     CALLBACK_SHARE_PREFIX, CALLBACK_SHARE_YES, MSG_START, MSG_CHECKING, \
     MSG_NO_TRANSACTIONS, MSG_FOUND_TRANSACTIONS, MSG_TRANSACTION_NOTIFICATION, \
     MSG_TRANSACTION_NOT_FOUND, MSG_CATEGORY_SELECTED, MSG_CONTEXT_NOT_FOUND, MSG_SHARED_EXPENSE, \
@@ -78,28 +77,25 @@ class TelegramBot:
 
     def _setup_handlers(self) -> None:
         """Set up message and callback handlers"""
+
         # Command handlers
         self.application.add_handler(CommandHandler(CMD_START, self.start_cmd))
         self.application.add_handler(CommandHandler(CMD_CHECK, self.check_cmd))
 
-        # Conversation handler for transaction categorization flow
-        conv_handler = ConversationHandler(
-            entry_points=[CallbackQueryHandler(self.category_selected, pattern=f"^{CALLBACK_CATEGORY_PREFIX}")],
-            states={
-                ConversationState.SELECTING_SHARING_TYPE.value: [
-                    CallbackQueryHandler(self.sharing_type_selected, pattern=f"^{CALLBACK_SHARE_PREFIX}")
-                ],
-                ConversationState.ENTERING_SHARE_AMOUNT.value: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.share_amount_entered)
-                ]
-            },
-            fallbacks=[CommandHandler(CMD_CANCEL, self.cancel_transaction)],
-            per_user=True,
-            per_message=True
+        # Individual callback query handlers for each step
+        self.application.add_handler(
+            CallbackQueryHandler(self.category_selected, pattern=f"^{CALLBACK_CATEGORY_PREFIX}")
         )
-        self.application.add_handler(conv_handler)
+        self.application.add_handler(
+            CallbackQueryHandler(self.sharing_type_selected, pattern=f"^{CALLBACK_SHARE_PREFIX}")
+        )
 
-        # Error handler
+        # Message handler for plain text amount entry (share amount)
+        self.application.add_handler(
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.share_amount_entered)
+        )
+
+        # Global error handler
         self.application.add_error_handler(self.error_handler)
 
     async def start_cmd(self, update: Update, context: CallbackContext) -> None:
@@ -179,53 +175,53 @@ class TelegramBot:
                         reply_markup=reply_markup,
                         parse_mode=HTML_PARSE_MODE
                     )
-                    self.conversation_context_manager.start_conversation(user_id, transaction, ConversationState.SELECTING_CATEGORY)
+                    self.conversation_context_manager.start_conversation(user_id, transaction,
+                                                                         ConversationState.SELECTING_CATEGORY)
                 except TelegramError as e:
                     logger.error(f"Failed to send message to user {user_id}: {e}")
 
         except Exception as e:
             logger.error(f"Error sending transaction notification: {e}")
 
-    async def category_selected(self, update: Update,
-                                context: CallbackContext) -> int:
+    async def category_selected(self, update: Update, context: CallbackContext) -> None:
         """Handle category selection and ask about sharing"""
         query = update.callback_query
         await query.answer()
 
+        # Extract transaction id from callback data (cat_{transaction_id}_{category_index})
+        parts = query.data.split("_")
+        user_id = update.effective_user.id
+        transaction_id = parts[1]
+
         try:
-            # Extract transaction id from callback data (cat_{transaction_id}_{category_index})
-            parts = query.data.split("_")
-            if len(parts) >= 2:
-                # get conversation context
-                user_id = update.effective_user.id
-                transaction_id = parts[1]
-                conversation = self.conversation_context_manager.get_conversation(user_id, transaction_id)
+            # get conversation context
+            conversation = self.conversation_context_manager.get_conversation(user_id, transaction_id)
 
-                if not conversation:
-                    await query.edit_message_text(
-                        text=MSG_TRANSACTION_NOT_FOUND,
-                        reply_markup=None
-                    )
-                    return ConversationHandler.END
-
-                # Extract category index from callback data
-                category = EXPENSE_CATEGORIES[int(parts[2])]
-
-                # Update context with selected category
-                self.conversation_context_manager.update_category(user_id, transaction_id, category)
-
-                keyboard = await get_sharing_type_keyboard(transaction_id)
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
+            if not conversation:
                 await query.edit_message_text(
-                    text=MSG_CATEGORY_SELECTED.format(category=category),
-                    parse_mode=HTML_PARSE_MODE,
-                    reply_markup=reply_markup
+                    text=MSG_TRANSACTION_NOT_FOUND,
+                    reply_markup=None
                 )
+                return
 
-                self.conversation_context_manager.update_state(user_id, transaction_id, ConversationState.SELECTING_SHARING_TYPE)
-                return ConversationState.SELECTING_SHARING_TYPE.value
+            # Extract category index from callback data
+            category = EXPENSE_CATEGORIES[int(parts[2])]
 
+            # Update context with selected category
+            self.conversation_context_manager.update_category(user_id, transaction_id, category)
+
+            keyboard = await get_sharing_type_keyboard(transaction_id)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await query.edit_message_text(
+                text=MSG_CATEGORY_SELECTED.format(category=category),
+                parse_mode=HTML_PARSE_MODE,
+                reply_markup=reply_markup
+            )
+
+            self.conversation_context_manager.update_state(user_id, transaction_id,
+                                                           ConversationState.SELECTING_SHARING_TYPE)
+            return
         except Exception as e:
             logger.error(f"Error in category selection: {e}")
             await query.edit_message_text(
@@ -233,9 +229,9 @@ class TelegramBot:
                 reply_markup=None
             )
 
-        return ConversationHandler.END
+        self.conversation_context_manager.end_conversation(user_id, transaction_id)
 
-    async def sharing_type_selected(self, update: Update, context: CallbackContext) -> int:
+    async def sharing_type_selected(self, update: Update, context: CallbackContext) -> None:
         """Handle sharing type selection"""
         query = update.callback_query
         await query.answer()
@@ -253,7 +249,7 @@ class TelegramBot:
                     text=MSG_CONTEXT_NOT_FOUND,
                     reply_markup=None
                 )
-                return ConversationHandler.END
+                return
 
             # Get the sharing selection
             is_shared = share_mode == CALLBACK_SHARE_YES
@@ -267,16 +263,25 @@ class TelegramBot:
                 total_amount = transaction.amount
                 await query.edit_message_text(
                     text=MSG_SHARED_EXPENSE.format(amount=total_amount),
-                    parse_mode=HTML_PARSE_MODE,
-                    reply_markup=None
+                    parse_mode=HTML_PARSE_MODE
                 )
 
-                self.conversation_context_manager.update_state(user_id, transaction_id, ConversationState.ENTERING_SHARE_AMOUNT)
-                return ConversationState.ENTERING_SHARE_AMOUNT.value
+                message = await context.bot.send_message(
+                    chat_id=query.message.chat.id,
+                    text="Enter your share amount for this transaction:",
+                    reply_markup=ForceReply(selective=True),
+                    parse_mode=HTML_PARSE_MODE,
+                    reply_to_message_id=query.message.message_id
+                )
+
+                # Store the message_id to match replies later
+                self.conversation_context_manager.add_message_id_to_conversation_context(user_id, transaction_id,
+                                                                                         message.message_id)
+                self.conversation_context_manager.update_state(user_id, transaction_id,
+                                                               ConversationState.ENTERING_SHARE_AMOUNT)
             else:
                 # Complete the transaction as solo expense
                 await self.complete_transaction(update, user_id, transaction_id)
-                return ConversationHandler.END
 
         except Exception as e:
             logger.error(f"Error in sharing type selection: {e}")
@@ -285,57 +290,68 @@ class TelegramBot:
                 reply_markup=None
             )
 
-        return ConversationHandler.END
+    async def share_amount_entered(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        message = update.message
+        if not message or not message.reply_to_message:
+            return
 
-    async def share_amount_entered(self, update: Update, context: CallbackContext) -> int:
-        """Handle user's share amount entry"""
-        user_id = update.effective_user.id
-        share_text = update.message.text.strip()
-        open_conversations = self.conversation_context_manager.get_conversations_by_state(user_id, ConversationState.ENTERING_SHARE_AMOUNT)
+        user_id = message.from_user.id
+        reply_to_message_id = message.reply_to_message.message_id
 
-        if len(open_conversations) == 1:
-            # get the only key
-            transaction_id = next(iter(open_conversations))
+        # Find the conversation that is waiting for this reply
+        conversations_waiting_for_share_amount = self.conversation_context_manager.get_conversations_by_state(
+            user_id, ConversationState.ENTERING_SHARE_AMOUNT
+        )
 
-            # Validate the share amount
-            try:
-                share_amount = float(share_text)
-                total_amount = float(open_conversations.get(transaction_id)[CONTEXT_TRANSACTION].amount)
+        if not conversations_waiting_for_share_amount:
+            return
 
-                if share_amount < 0:
-                    await update.message.reply_text(MSG_INVALID_SHARE_NEGATIVE)
-                    self.conversation_context_manager.update_state(user_id, transaction_id, ConversationState.ENTERING_SHARE_AMOUNT)
-                    return ConversationState.ENTERING_SHARE_AMOUNT.value
+        # get the transaction id behind the message to which this is a reply
+        matching_transaction_id = next(
+            (transaction_id for transaction_id, data in conversations_waiting_for_share_amount.items()
+             if reply_to_message_id in data.get(CONTEXT_RELATED_MESSAGE_IDS)),
+            None
+        )
 
-                if share_amount > total_amount:
-                    await update.message.reply_text(
-                        MSG_INVALID_SHARE_EXCEEDS_TOTAL.format(
-                            share=share_amount,
-                            total=total_amount
-                        )
-                    )
-                    self.conversation_context_manager.update_state(user_id, transaction_id,
-                                                                   ConversationState.ENTERING_SHARE_AMOUNT)
-                    return ConversationState.ENTERING_SHARE_AMOUNT.value
+        if not matching_transaction_id:
+            return
 
-                # Update context with user's share and complete the transaction
-                self.conversation_context_manager.update_user_share(user_id, transaction_id, share_amount)
-                self.conversation_context_manager.update_state(user_id, transaction_id, ConversationState.COMPLETED)
-                await self.complete_transaction(update, user_id, transaction_id)
+        # Validate the share amount
+        try:
+            share_amount = float(message.text.strip())
+            conversation = conversations_waiting_for_share_amount.get(matching_transaction_id)
+            total_amount = float(conversation[CONTEXT_TRANSACTION].amount)
 
-            except ValueError:
-                await update.message.reply_text(MSG_INVALID_AMOUNT_FORMAT)
-                return ConversationState.ENTERING_SHARE_AMOUNT.value
+            if share_amount < 0:
+                sent_message = await update.message.reply_text(MSG_INVALID_SHARE_NEGATIVE,
+                                                               reply_markup=ForceReply(selective=True))
+                self.conversation_context_manager.add_message_id_to_conversation_context(user_id,
+                                                                                         matching_transaction_id,
+                                                                                         sent_message.message_id)
+                return
 
-        elif len(open_conversations) == 0:
-            await update.message.reply_text(MSG_CONTEXT_NOT_FOUND)
-            return ConversationHandler.END
+            if share_amount > total_amount:
+                sent_message = await update.message.reply_text(
+                    MSG_INVALID_SHARE_EXCEEDS_TOTAL.format(
+                        share=share_amount,
+                        total=total_amount
+                    ),
+                    reply_markup=ForceReply(selective=True)
+                )
+                self.conversation_context_manager.add_message_id_to_conversation_context(user_id,
+                                                                                         matching_transaction_id,
+                                                                                         sent_message.message_id)
+                return
 
-        else:
-            await update.message.reply_text(MSG_MULTIPLE_OPEN_THREADS)
-            return ConversationState.ENTERING_SHARE_AMOUNT.value
+        except ValueError:
+            sent_message = await update.message.reply_text(MSG_INVALID_AMOUNT_FORMAT,
+                                                           reply_markup=ForceReply(selective=True))
+            self.conversation_context_manager.add_message_id_to_conversation_context(user_id, matching_transaction_id,
+                                                                                     sent_message.message_id)
+            return
 
-        return ConversationHandler.END
+        self.conversation_context_manager.update_user_share(user_id, matching_transaction_id, share_amount)
+        await self.complete_transaction(update, user_id, matching_transaction_id)
 
     async def complete_transaction(self, update: Update, user_id: int, transaction_id: str) -> None:
         """Complete the transaction processing and update the sheet"""
@@ -354,13 +370,14 @@ class TelegramBot:
             success = self.persistence_wrapper.write_transaction(transaction)
 
             if success:
-                share_info = f"*Your Share:* {transaction.user_share}\n" if transaction.is_shared else ""
                 message = MSG_TRANSACTION_UPDATED.format(
+                    date=transaction.date,
+                    time=transaction.time,
                     recipient=transaction.recipient,
                     amount=transaction.amount,
                     category=transaction.category,
                     type=SHARED_TYPE if transaction.is_shared else SOLO_TYPE,
-                    share_info=share_info
+                    share_info=transaction.user_share
                 )
             else:
                 message = MSG_TRANSACTION_UPDATE_FAILED
@@ -389,17 +406,8 @@ class TelegramBot:
         # End the conversation
         self.conversation_context_manager.end_conversation(user_id, transaction_id)
 
-    async def cancel_transaction(self, update: Update, context: CallbackContext) -> int:
-        """Cancel the current transaction categorization"""
-        user_id = update.effective_user.id
-        self.conversation_context_manager.end_conversation(user_id)
-
-        await update.message.reply_text(
-            "Transaction categorization cancelled."
-        )
-        return ConversationHandler.END
-
-    async def error_handler(self, update: object, context: CallbackContext) -> None:
+    @staticmethod
+    async def error_handler(update: object, context: CallbackContext) -> None:
         """Handle errors in the dispatcher"""
         logger.error(f"Exception while handling an update: {context.error}")
         tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
