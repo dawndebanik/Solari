@@ -11,3 +11,4 @@ google-auth-oauthlib
 google-auth-httplib2
 pandas
 asyncio
+beautifulsoup4

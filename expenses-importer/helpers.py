@@ -1,18 +1,23 @@
 import re
 
+
 # Function to detect the bank based on email sender
 def detect_bank(sender, body):
-    if 'hdfc' in sender.lower() or 'hdfc' in body.lower() :
+    if 'hdfc' in sender.lower() or 'hdfc bank' in body.lower():
         return "HDFC"
-    elif 'icici' in sender.lower() or 'icici' in body.lower():
+    elif 'icici' in sender.lower() or 'icici bank' in body.lower():
         return "ICICI"
-    elif 'hsbc' in sender.lower() or 'hsbc' in body.lower():
+    elif 'hsbc' in sender.lower() or 'hsbc bank' in body.lower():
         return "HSBC"
-    elif 'axis' in sender.lower() or 'axis' in body.lower():
+    elif 'axis' in sender.lower() or 'axis bank' in body.lower():
         return "Axis"
-    elif 'federal' in sender.lower() or 'federal' in body.lower():
+    elif 'federal' in sender.lower() or 'federal bank' in body.lower():
         return "Federal"
+    elif 'kotak' in sender.lower() or 'kotak bank' in body.lower():
+        return "Kotak"
+
     return None
+
 
 def parse_common(body, amount_pattern, description_pattern):
     amount_match = re.search(amount_pattern, body, re.I)
@@ -28,15 +33,30 @@ def parse_common(body, amount_pattern, description_pattern):
 
     raise Exception("Unparseable transaction:\n" + body)
 
-def parse_by_bank(bank, body):
+
+def parse_cc_transaction(bank, body):
+    parsed = None
     if bank == "HDFC":
-        return parse_common(body, r'7883\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
+        parsed = parse_common(body, r'7883\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
     if bank == "ICICI":
-        return parse_common(body, r'transaction\s+of\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'Info:\s+(.*?)\.')
+        parsed = parse_common(body, r'transaction\s+of\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'Info:\s+(.*?)\.')
     if bank == "HSBC":
-        return parse_common(body, r'been\s+used\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'payment to\s+(.*?)\s+on')
+        parsed = parse_common(body, r'been\s+used\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'payment to\s+(.*?)\s+on')
     if bank == "Axis":
-        return parse_common(body, r'9339\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
+        parsed = parse_common(body, r'9339\s+for\s+(?:Rs\.?|INR)\s+([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
     if bank == "Federal":
-        return parse_common(body, r'txn\s+of\s+(?:₹|Rs\.?|INR)\s*([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
-    return None
+        parsed = parse_common(body, r'txn\s+of\s+(?:₹|Rs\.?|INR)\s*([\d,]+(\.\d+)?)', r'at\s+(.*?)\s+on')
+    return parsed, "CreditCard"
+
+
+def parse_upi_transaction(bank, body):
+    parsed = None
+    if bank == "Federal":
+        parsed = parse_common(body,
+                            r'(?:₹|Rs\.?|INR|\b[A-Z]{3}\b)\s*([\d,]+(\.\d{1,})?)',
+                            r'to\s+(.*?)\.')
+    elif bank == "Kotak":
+        parsed = parse_common(body,
+                            r'Sent\s+(?:₹|Rs\.?|INR|\b[A-Z]{3}\b)(.*?)\s+',
+                            r'to\s+(.*?)on')
+    return parsed, "UPI"
