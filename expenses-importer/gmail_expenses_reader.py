@@ -136,10 +136,7 @@ def process_emails(service, label_name='CreditCardTransactions'):
                             recipient,
                             amount,
                             bank,
-                            "CreditCard",
-                            None,
-                            None,
-                            None
+                            "CreditCard"
                         )
                     )
                     transaction_ids.add(transaction_id)
